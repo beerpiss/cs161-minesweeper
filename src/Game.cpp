@@ -12,8 +12,8 @@
 #define PLAYFIELD_Y_OFFSET 2
 
 const char* playingFace = "((-.-))...";
-const char* wonFace = "  \\(^o^)/ ";
-const char* lostFace = "   (x_x)  ";
+const char* wonFace = " \\(^o^)/  ";
+const char* lostFace = " (x_x)    ";
 
 Game::Game(int width, int height, int mineDensityPercentage) : minesweeper(Minesweeper(width, height, mineDensityPercentage)) {
 
