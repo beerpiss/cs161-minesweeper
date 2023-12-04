@@ -1,5 +1,5 @@
 #include "Game.h"
 
 int main() {
-    Game(20, 20, 10).start();
+    Game(40, 35, 20).start();
 }

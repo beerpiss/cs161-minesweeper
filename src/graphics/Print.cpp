@@ -6,8 +6,6 @@
 
 #include <string>
 
-#include <ncurses/ncurses.h>
-
 #include "ColorPair.h"
 
 namespace graphics {

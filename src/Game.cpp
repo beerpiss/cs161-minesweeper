@@ -3,8 +3,7 @@
 //
 #include <stdexcept>
 
-#include <ncurses/ncurses.h>
-
+#include "curses.h"
 #include "Game.h"
 #include "graphics/ColorPair.h"
 #include "graphics/Print.h"
@@ -53,7 +52,7 @@ void Game::processInput(int key) {
     bool shouldUpdateGrid = false;
     bool shouldUpdateFlagCount = false;
 
-    MEVENT event;
+    MEVENT event{};
 
     switch (key) {
 #pragma region Movement
@@ -185,16 +184,17 @@ void Game::drawGrid() {
 }
 
 void Game::drawAll() {
+    Grid& grid = minesweeper.getGrid();
+    const int gridWidth = grid.width * 3;
+    int xOffset = gridWidth + 3;
+
+    resize_term(std::max(12, grid.height + PLAYFIELD_Y_OFFSET), xOffset + 27);
+
     updateTimer();
     updateFlagCount();
     drawGrid();
 
-    Grid& grid = minesweeper.getGrid();
-    const int gridWidth = grid.width * 3;
-
     graphics::print((gridWidth - 11) / 2, 0, PLAYING_FACE);
-
-    int xOffset = gridWidth + 3;
 
     graphics::print(xOffset, 2, "unopened: -");
     graphics::print(xOffset, 3, "opened:   (blank)");

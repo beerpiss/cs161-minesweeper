@@ -4,9 +4,7 @@
 
 #include "Graphics.h"
 
-#include <ncurses/ncurses.h>
-
-#include "ColorPair.h"
+#include "../curses.h"
 
 namespace graphics {
     Graphics::Graphics() {
