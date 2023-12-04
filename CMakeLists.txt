@@ -6,8 +6,6 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIR})
 
-set(CMAKE_CXX_FLAGS "-DNCURSES_STATIC")
-
 add_executable(minesweeper src/main.cpp
         src/minesweeper/Tile.cpp
         src/minesweeper/Tile.h
@@ -18,6 +16,13 @@ add_executable(minesweeper src/main.cpp
         src/Game.cpp
         src/Game.h
         src/utils.cpp
-        src/utils.h)
+        src/utils.h
+        src/graphics/Graphics.cpp
+        src/graphics/Graphics.h
+        src/graphics/Print.cpp
+        src/graphics/Print.h
+        src/graphics/ColorPair.cpp
+        src/graphics/ColorPair.h)
 
+target_compile_definitions(minesweeper PRIVATE NCURSES_STATIC)
 target_link_libraries(minesweeper ${CURSES_LIBRARY})

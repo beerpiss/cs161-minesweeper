@@ -7,13 +7,18 @@
 #include <array>
 
 Minesweeper::Minesweeper(int width, int height, int mineDensityPercentage)
-    : grid(Grid(width, height, mineDensityPercentage)) {
-}
+    : grid(Grid(width, height, mineDensityPercentage)) { }
+
+Minesweeper::Minesweeper(Grid grid) : grid(std::move(grid)) { }
 
 void Minesweeper::flag(int x, int y) {
     Tile *tile = grid.getTileAt(x, y);
 
     if (!tile) {
+        return;
+    }
+
+    if (tile->isOpened()) {
         return;
     }
 
@@ -43,7 +48,7 @@ void Minesweeper::open(int x, int y) {
 }
 
 bool Minesweeper::won() const {
-    return correctlyFlagged == grid.mineCount && correctlyFlagged + opened == grid.tileCount;
+    return correctlyFlagged == grid.mineCount && correctlyFlagged == totalFlagged;
 }
 
 bool Minesweeper::lost() const {

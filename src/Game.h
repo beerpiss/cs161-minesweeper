@@ -5,6 +5,8 @@
 #ifndef MINESWEEPER_GAME_H
 #define MINESWEEPER_GAME_H
 
+#include "graphics/ColorPair.h"
+#include "graphics/Graphics.h"
 #include "minesweeper/Minesweeper.h"
 
 class Game {
@@ -13,6 +15,7 @@ public:
     void start();
 private:
     Minesweeper minesweeper;
+    graphics::Graphics graphics;
 
     time_t currentTime = 0;
 
@@ -25,6 +28,7 @@ private:
     void drawGrid();
     void updateTimer() const;
     void updateFlagCount();
+    static graphics::Color getColorForMineCount(int nearbyMineCount);
     void end();
 };
 

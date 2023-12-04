@@ -1,19 +1,22 @@
 //
 // Created by beerpsi on 12/3/2023.
 //
-#include <string>
+#include <stdexcept>
 
 #include <ncurses/ncurses.h>
 
 #include "Game.h"
+#include "graphics/ColorPair.h"
+#include "graphics/Print.h"
 #include "minesweeper/Minesweeper.h"
 #include "utils.h"
 
-#define PLAYFIELD_Y_OFFSET 2
+#define PLAYFIELD_Y_OFFSET (2)
+#define PLAYING_FACE ("((-.-))...")
+#define WIN_FACE (" \\(^o^)/  ")
+#define LOSE_FACE (" (x_x)    ")
 
-const char* playingFace = "((-.-))...";
-const char* wonFace = " \\(^o^)/  ";
-const char* lostFace = " (x_x)    ";
+using Color = graphics::Color;
 
 Game::Game(int width, int height, int mineDensityPercentage) : minesweeper(Minesweeper(width, height, mineDensityPercentage)) {
 
@@ -22,26 +25,19 @@ Game::Game(int width, int height, int mineDensityPercentage) : minesweeper(Mines
 void Game::start() {
     const time_t startTime = time_since_epoch();
 
-    initscr();
-    noecho();
-    cbreak();
-    curs_set(0);
-    keypad(stdscr, TRUE);
-    nodelay(stdscr, TRUE);
-    mousemask(BUTTON1_CLICKED | BUTTON3_CLICKED, nullptr);
-
     drawAll();
 
-    int iter = 0;
+    time_t lastTime = currentTime;
     while (!minesweeper.won() && !minesweeper.lost()) {
-        iter++;
-        if (iter % 50 == 0) {
-            iter = 0;
-            currentTime = time_since_epoch() - startTime;
+        refresh();
+
+        currentTime = time_since_epoch() - startTime;
+        if (currentTime != lastTime) {
+            lastTime = currentTime;
             updateTimer();
         }
 
-        processInput(getch());
+        processInput(wgetch(stdscr));
         napms(20);
     }
 
@@ -129,6 +125,10 @@ void Game::processInput(int key) {
             }
             break;
 #pragma endregion
+        case KEY_RESIZE:
+            clear();
+            drawAll();
+            break;
         default:
             return;
     }
@@ -147,11 +147,12 @@ void Game::processInput(int key) {
 }
 
 void Game::moveCursorFrom(int prevX, int prevY) const {
-    mvprintw(prevY + PLAYFIELD_Y_OFFSET, prevX * 3, " ");
-    mvprintw(prevY + PLAYFIELD_Y_OFFSET, prevX * 3 + 2, " ");
+    graphics::print(prevX * 3, prevY + PLAYFIELD_Y_OFFSET, " ");
+    graphics::print(prevX * 3 + 2, prevY + PLAYFIELD_Y_OFFSET, " ");
 
-    mvprintw(cursorY + PLAYFIELD_Y_OFFSET, cursorX * 3, "[");
-    mvprintw(cursorY + PLAYFIELD_Y_OFFSET, cursorX * 3 + 2, "]");
+    graphics::print(cursorX * 3, cursorY + PLAYFIELD_Y_OFFSET, "[");
+    graphics::print(cursorX * 3 + 2, cursorY + PLAYFIELD_Y_OFFSET, "]");
+
     move(cursorY + PLAYFIELD_Y_OFFSET, cursorX * 3);
 }
 
@@ -165,17 +166,19 @@ void Game::drawGrid() {
             int cellX = x * 3 + 1;
 
             if (tile->isOpened()) {
-                if (tile->hasMine()) {
-                    mvprintw(cellY, cellX, "*");
+                if (tile->hasMine() && tile->isFlagged()) {
+                    graphics::print(cellX, cellY, "?", Color::WHITE, Color::GREEN);
+                } else if (tile->hasMine()) {
+                    graphics::print(cellX, cellY, "*", Color::WHITE, Color::RED);
                 } else if (tile->nearbyMinesCount) {
-                    mvprintw(cellY, cellX, "%d", tile->nearbyMinesCount);
+                    graphics::print(cellX, cellY, std::to_string(tile->nearbyMinesCount), getColorForMineCount(tile->nearbyMinesCount));
                 } else {
-                    mvprintw(cellY, cellX, " ");
+                    graphics::print(cellX, cellY, " ");
                 }
             } else if (tile->isFlagged()) {
-                mvprintw(cellY, cellX, "?");
+                graphics::print(cellX, cellY, "?", Color::YELLOW);
             } else {
-                mvprintw(cellY, cellX, "-");
+                graphics::print(cellX, cellY, "-");
             }
         }
     }
@@ -189,24 +192,26 @@ void Game::drawAll() {
     Grid& grid = minesweeper.getGrid();
     const int gridWidth = grid.width * 3;
 
-    mvprintw(0, (gridWidth - 11) / 2, "%s", playingFace);
+    graphics::print((gridWidth - 11) / 2, 0, PLAYING_FACE);
 
     int xOffset = gridWidth + 3;
 
-    mvprintw(2, xOffset, "unopened: -");
-    mvprintw(3, xOffset, "opened:   (blank)");
-    mvprintw(4, xOffset, "mine:     *");
-    mvprintw(5, xOffset, "flagged:  ?");
+    graphics::print(xOffset, 2, "unopened: -");
+    graphics::print(xOffset, 3, "opened:   (blank)");
+    graphics::print(xOffset, 4, "mine:     ");
+    graphics::print(xOffset + 10, 4, "*", Color::RED);
+    graphics::print(xOffset, 5, "flagged:  ");
+    graphics::print(xOffset + 10, 5, "?", Color::YELLOW);
 
-    mvprintw(7, xOffset,  "up:    w / k / up arrow");
-    mvprintw(8, xOffset,  "down:  s / j / down arrow");
-    mvprintw(9, xOffset,  "left:  a / h / left arrow");
-    mvprintw(10, xOffset, "right: d / l / right arrow");
-    mvprintw(11, xOffset, "open:  space");
-    mvprintw(12, xOffset, "flag:  f");
+    graphics::print(xOffset, 7, "up:    w / k / up arrow");
+    graphics::print(xOffset, 8, "down:  s / j / down arrow");
+    graphics::print(xOffset, 9, "left:  a / h / left arrow");
+    graphics::print(xOffset, 10, "right: d / l / right arrow");
+    graphics::print(xOffset, 11, "open:  space");
+    graphics::print(xOffset, 12, "flag:  f");
 
-    mvprintw(cursorY + PLAYFIELD_Y_OFFSET, cursorX * 3, "[");
-    mvprintw(cursorY + PLAYFIELD_Y_OFFSET, cursorX * 3 + 2, "]");
+    graphics::print(cursorX * 3, cursorY + PLAYFIELD_Y_OFFSET, "[");
+    graphics::print(cursorX * 3 + 2, cursorY + PLAYFIELD_Y_OFFSET, "]");
     move(cursorY + PLAYFIELD_Y_OFFSET, cursorX * 3);
 }
 
@@ -219,14 +224,38 @@ void Game::updateFlagCount() {
     mvprintw(0, grid.width * 3 - 11, "Flags: %03d", minesweeper.remainingFlags());
 }
 
+
+graphics::Color Game::getColorForMineCount(int nearbyMineCount) {
+    switch (nearbyMineCount) {
+        case 1:
+            return Color::BLUE;
+        case 2:
+            return Color::GREEN;
+        case 3:
+            return Color::RED;
+        case 4:
+            return Color::BLUE;
+        case 5:
+            return Color::CYAN;
+        case 6:
+            return Color::YELLOW;
+        case 7:
+            return Color::RED;
+        case 8:
+            return Color::MAGENTA;
+        default:
+            throw std::runtime_error("yeah this isn't happening");
+    }
+}
+
 void Game::end() {
     Grid& grid = minesweeper.getGrid();
     const int gridWidth = grid.width * 3;
 
     if (minesweeper.won()) {
-        mvprintw(0, (gridWidth - 11) / 2, "%s", wonFace);
+        graphics::print((gridWidth - 11) / 2, 0, WIN_FACE);
     } else {
-        mvprintw(0, (gridWidth - 11) / 2, "%s", lostFace);
+        graphics::print((gridWidth - 11) / 2, 0, LOSE_FACE);
     }
 
     while (getch() != ' ');

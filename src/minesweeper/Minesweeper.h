@@ -13,6 +13,7 @@
 class Minesweeper {
 public:
     Minesweeper(int width, int height, int mineDensityPercentage);
+    explicit Minesweeper(Grid grid);
 
     void flag(int x, int y);
     void open(int x, int y);
