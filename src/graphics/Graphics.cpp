@@ -4,7 +4,7 @@
 
 #include "Graphics.h"
 
-#include "../curses.h"
+#include "curses.h"
 
 namespace graphics {
     Graphics::Graphics() {
@@ -14,7 +14,7 @@ namespace graphics {
         curs_set(0);
         keypad(stdscr, TRUE);
         nodelay(stdscr, TRUE);
-        mousemask(BUTTON1_CLICKED | BUTTON3_CLICKED, nullptr);
+        mousemask(BUTTON1_CLICKED | BUTTON3_CLICKED | BUTTON1_PRESSED | BUTTON1_RELEASED, nullptr);
 
         if (has_colors()) {
             start_color();

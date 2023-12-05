@@ -26,6 +26,7 @@ private:
     void moveCursorFrom(int prevX, int prevY) const;
     void drawAll();
     void drawGrid();
+    void updateFace(const char* face);
     void updateTimer() const;
     void updateFlagCount();
     static graphics::Color getColorForMineCount(int nearbyMineCount);

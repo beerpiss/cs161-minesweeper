@@ -30,8 +30,9 @@ add_executable(minesweeper src/main.cpp
         src/graphics/Print.h
         src/graphics/ColorPair.cpp
         src/graphics/ColorPair.h
-        src/curses.h)
+        src/include/curses.h)
 
+target_include_directories(minesweeper PRIVATE src/include)
 target_compile_definitions(minesweeper PRIVATE NCURSES_STATIC)
 target_compile_definitions(minesweeper PRIVATE PDCURSES_STATIC)
 target_link_libraries(minesweeper ${CURSES_LIBRARY})

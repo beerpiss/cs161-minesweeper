@@ -12,6 +12,7 @@
 
 #define PLAYFIELD_Y_OFFSET (2)
 #define PLAYING_FACE ("((-.-))...")
+#define HOLDING_FACE ("((o.o))...")
 #define WIN_FACE (" \\(^o^)/  ")
 #define LOSE_FACE (" (x_x)    ")
 
@@ -37,7 +38,7 @@ void Game::start() {
         }
 
         processInput(wgetch(stdscr));
-        napms(20);
+        napms(10);
     }
 
     end();
@@ -97,11 +98,8 @@ void Game::processInput(int key) {
             break;
 #pragma endregion
 #pragma region Mouse inputs
-        // TODO: make mouse inputs work
         case KEY_MOUSE:
             if (getmouse(&event) == OK) {
-                // TODO: move cursor
-                // TODO: open or flag cell
                 if (event.y < PLAYFIELD_Y_OFFSET || event.y > grid.height + PLAYFIELD_Y_OFFSET) {
                     return;
                 }
@@ -113,7 +111,11 @@ void Game::processInput(int key) {
                 cursorX = event.x / 3;
                 cursorY = event.y - PLAYFIELD_Y_OFFSET;
 
-                if (event.bstate & BUTTON1_CLICKED) {
+                if (event.bstate & BUTTON1_PRESSED && !grid.getTileAt(cursorX, cursorY)->isOpened()) {
+                    updateFace(HOLDING_FACE);
+                } else if (event.bstate & BUTTON1_RELEASED) {
+                    updateFace(PLAYING_FACE);
+                } else if (event.bstate & BUTTON1_CLICKED) {
                     minesweeper.open(cursorX, cursorY);
                     shouldUpdateGrid = true;
                 } else if (event.bstate & BUTTON3_CLICKED) {
@@ -194,7 +196,7 @@ void Game::drawAll() {
     updateFlagCount();
     drawGrid();
 
-    graphics::print((gridWidth - 11) / 2, 0, PLAYING_FACE);
+    updateFace(PLAYING_FACE);
 
     graphics::print(xOffset, 2, "unopened: -");
     graphics::print(xOffset, 3, "opened:   (blank)");
@@ -213,6 +215,13 @@ void Game::drawAll() {
     graphics::print(cursorX * 3, cursorY + PLAYFIELD_Y_OFFSET, "[");
     graphics::print(cursorX * 3 + 2, cursorY + PLAYFIELD_Y_OFFSET, "]");
     move(cursorY + PLAYFIELD_Y_OFFSET, cursorX * 3);
+}
+
+void Game::updateFace(const char *face) {
+    Grid& grid = minesweeper.getGrid();
+    const int gridWidth = grid.width * 3;
+
+    graphics::print((gridWidth - 11) / 2, 0, face);
 }
 
 void Game::updateTimer() const {
@@ -249,13 +258,10 @@ graphics::Color Game::getColorForMineCount(int nearbyMineCount) {
 }
 
 void Game::end() {
-    Grid& grid = minesweeper.getGrid();
-    const int gridWidth = grid.width * 3;
-
     if (minesweeper.won()) {
-        graphics::print((gridWidth - 11) / 2, 0, WIN_FACE);
+        updateFace(WIN_FACE);
     } else {
-        graphics::print((gridWidth - 11) / 2, 0, LOSE_FACE);
+        updateFace(LOSE_FACE);
     }
 
     while (getch() != ' ');

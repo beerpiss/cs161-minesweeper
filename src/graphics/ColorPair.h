@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-#include "../curses.h"
+#include "curses.h"
 
 namespace graphics {
     enum Color : uint8_t {
