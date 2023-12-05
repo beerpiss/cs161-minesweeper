@@ -8,7 +8,7 @@ TUI Minesweeper game (university project)
 - [ ] Functions: new game, change board dimensions. Select a function from console screen.
 - [x] Randomize positions of the mines.
 - [x] Receiving new position of the pointer (to select a cell) from console screen.
-- [ ] Saving the current state of the board and loading in the next playing session.
+- [x] Saving the current state of the board and loading in the next playing session.
 - [ ] Saving high scores.
 - [x] Using keyboard (arrow keys) to select a cell.
 - [ ] Rendering images.
