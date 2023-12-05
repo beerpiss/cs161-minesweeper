@@ -4,6 +4,8 @@
 
 #include "Grid.h"
 
+#include <algorithm>
+#include <stdexcept>
 #include <random>
 #include <array>
 
@@ -11,6 +13,16 @@ Grid::Grid(int width, int height, int mineDensityPercentage) :
     width(width), height(height), tileCount(width * height), mineCount(width * height * mineDensityPercentage / 100) {
     createSquares();
     generateMines();
+}
+
+Grid::Grid(std::vector<Tile> tiles, int width, int height, int mineCount) :
+    tiles(std::move(tiles)),
+    width(width), height(height),
+    tileCount(width * height),
+    mineCount(mineCount) {
+    if (width * height != this->tiles.size()) {
+        throw std::runtime_error("Mismatch between declared and actual grid size.");
+    }
 }
 
 /**

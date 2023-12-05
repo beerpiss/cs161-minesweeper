@@ -63,6 +63,10 @@ int Minesweeper::remainingFlags() const {
     return grid.mineCount - totalFlagged;
 }
 
+Grid &Minesweeper::getGrid() {
+    return grid;
+}
+
 void Minesweeper::open(Tile *tile) {
     if (tile->isOpened()) {
         // Some Minesweeper implementations automatically open adjacent tiles
@@ -132,8 +136,4 @@ void Minesweeper::openNearby(Tile* tile, bool isRoot) {
             }
         }
     }
-}
-
-Grid &Minesweeper::getGrid() {
-    return grid;
 }

@@ -5,6 +5,7 @@
 #ifndef MINESWEEPER_GAME_H
 #define MINESWEEPER_GAME_H
 
+#include <iostream>
 #include "graphics/ColorPair.h"
 #include "graphics/Graphics.h"
 #include "minesweeper/Minesweeper.h"
@@ -12,6 +13,9 @@
 class Game {
 public:
     Game(int width, int height, int mineDensityPercentage);
+    explicit Game(Minesweeper minesweeper);
+
+    static Game importGameState(std::istream& is);
     void start();
 private:
     Minesweeper minesweeper;
@@ -31,6 +35,7 @@ private:
     void updateFlagCount();
     static graphics::Color getColorForMineCount(int nearbyMineCount);
     void end();
+    void exportGameState(std::ostream& os);
 };
 
 

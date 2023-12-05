@@ -2,6 +2,7 @@
 // Created by beerpsi on 12/3/2023.
 //
 #include <stdexcept>
+#include <fstream>
 
 #include "curses.h"
 #include "Game.h"
@@ -10,6 +11,7 @@
 #include "minesweeper/Minesweeper.h"
 #include "utils.h"
 
+#define ctrl(x) ((x) & 0x1f)
 #define PLAYFIELD_Y_OFFSET (2)
 #define PLAYING_FACE ("((-.-))...")
 #define HOLDING_FACE ("((o.o))...")
@@ -22,7 +24,13 @@ Game::Game(int width, int height, int mineDensityPercentage) : minesweeper(Mines
 
 }
 
+Game::Game(Minesweeper minesweeper) : minesweeper(std::move(minesweeper)) {
+
+}
+
 void Game::start() {
+    // If this was loaded from a previous save, currentTime > 0
+    const time_t offset = currentTime;
     const time_t startTime = time_since_epoch();
 
     drawAll();
@@ -31,7 +39,7 @@ void Game::start() {
     while (!minesweeper.won() && !minesweeper.lost()) {
         refresh();
 
-        currentTime = time_since_epoch() - startTime;
+        currentTime = time_since_epoch() - startTime + offset;
         if (currentTime != lastTime) {
             lastTime = currentTime;
             updateTimer();
@@ -126,6 +134,14 @@ void Game::processInput(int key) {
             }
             break;
 #pragma endregion
+#pragma region Keyboard shortcuts
+        case ctrl('o'): {
+            std::ofstream saveFile("save.mine");
+            exportGameState(saveFile);
+            saveFile.close();
+            exit(0);
+        }
+#pragma endregion
         case KEY_RESIZE:
             clear();
             drawAll();
@@ -190,7 +206,7 @@ void Game::drawAll() {
     const int gridWidth = grid.width * 3;
     int xOffset = gridWidth + 3;
 
-    resize_term(std::max(12, grid.height + PLAYFIELD_Y_OFFSET), xOffset + 27);
+    resize_term(std::max(14, grid.height + PLAYFIELD_Y_OFFSET), xOffset + 27);
 
     updateTimer();
     updateFlagCount();
@@ -211,6 +227,8 @@ void Game::drawAll() {
     graphics::print(xOffset, 10, "right: d / l / right arrow");
     graphics::print(xOffset, 11, "open:  space");
     graphics::print(xOffset, 12, "flag:  f");
+
+    graphics::print(xOffset, 14, "save and quit: ctrl + o");
 
     graphics::print(cursorX * 3, cursorY + PLAYFIELD_Y_OFFSET, "[");
     graphics::print(cursorX * 3 + 2, cursorY + PLAYFIELD_Y_OFFSET, "]");
@@ -265,4 +283,91 @@ void Game::end() {
     }
 
     while (getch() != ' ');
+}
+
+Game Game::importGameState(std::istream &is) {
+    std::string buf;
+
+    if (!std::getline(is, buf)) {
+        throw std::runtime_error("Truncated stream: could not get magic bytes");
+    }
+    if (buf != "Minesweeper Format Version 1.00") {
+        throw std::runtime_error("Invalid save file.");
+    }
+
+    if (!std::getline(is, buf)) {
+        throw std::runtime_error("Truncated stream: could not get timer");
+    }
+    time_t currentTime = std::stoll(buf);
+
+    if (!std::getline(is, buf)) {
+        throw std::runtime_error("Truncated stream: could not get board width");
+    }
+    int width = std::stoi(buf);
+
+    if (!std::getline(is, buf)) {
+        throw std::runtime_error("Truncated stream: could not get board height");
+    }
+    int height = std::stoi(buf);
+
+    int mineCount = 0;
+    std::vector<Tile> tiles;
+
+    for (int i = 0; i < width * height; i++) {
+        if (!std::getline(is, buf)) {
+            throw std::runtime_error("Truncated stream: could not get board state");
+        }
+
+        int state = std::stoi(buf);
+        int x = i % width;
+        int y = i / width;
+
+        Tile tile(x, y);
+
+        tile.nearbyMinesCount = state & 15;
+
+        if (state & 16) {
+            mineCount++;
+            tile.setMine();
+        }
+
+        if (state & 32) {
+            tile.setOpened();
+        }
+
+        if (state & 64) {
+            tile.toggleFlagged();
+        }
+
+        tiles.push_back(tile);
+    }
+
+    Grid grid(tiles, width, height, mineCount);
+    Minesweeper minesweeper(grid);
+    Game game(minesweeper);
+
+    game.currentTime = currentTime;
+
+    return game;
+}
+
+void Game::exportGameState(std::ostream &os) {
+    Grid& grid = minesweeper.getGrid();
+
+    os << "Minesweeper Format Version 1.00\n";
+    os << currentTime << '\n';
+    os << grid.width << '\n';
+    os << grid.height << '\n';
+
+    for (int i = 0; i < grid.tileCount; i++) {
+        Tile* tile = grid.getTileAtIndex(i);
+
+        if (!tile) {
+            break;
+        }
+
+        uint8_t state = tile->nearbyMinesCount | (tile->hasMine() << 4) | (tile->isOpened() << 5) | (tile->isFlagged() << 6);
+
+        os << std::to_string(state) << '\n';
+    }
 }

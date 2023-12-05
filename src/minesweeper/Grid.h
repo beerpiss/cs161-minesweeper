@@ -12,6 +12,7 @@
 class Grid {
 public:
     Grid(int width, int height, int mineDensityPercentage);
+    Grid(std::vector<Tile> tiles, int width, int height, int mineCount);
 
     [[nodiscard]] bool isInBounds(int x, int y) const;
 
