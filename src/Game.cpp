@@ -3,9 +3,12 @@
 //
 #include <stdexcept>
 #include <fstream>
+#include <ctime>
+#include <chrono>
 
 #include "curses.h"
 #include "Game.h"
+
 #include "graphics/ColorPair.h"
 #include "graphics/Print.h"
 #include "minesweeper/Minesweeper.h"
@@ -20,11 +23,10 @@
 
 using Color = graphics::Color;
 
-Game::Game(int width, int height, int mineDensityPercentage) : minesweeper(Minesweeper(width, height, mineDensityPercentage)) {
-
+Game::Game(int width, int height, int mineDensityPercentage, int difficultyId) : minesweeper(Minesweeper(width, height, mineDensityPercentage)), difficultyId(difficultyId) {
 }
 
-Game::Game(Minesweeper minesweeper) : minesweeper(std::move(minesweeper)) {
+Game::Game(Minesweeper minesweeper, int difficultyId) : minesweeper(std::move(minesweeper)), difficultyId(difficultyId) {
 
 }
 
@@ -45,6 +47,10 @@ void Game::start() {
             updateTimer();
         }
 
+        if (currentTime % 30 == 0 && currentTime != 0) {
+            saveGameToFile("save.mine");
+        }
+
         processInput(wgetch(stdscr));
         napms(10);
     }
@@ -52,8 +58,16 @@ void Game::start() {
     end();
 }
 
+bool Game::won() const {
+    return minesweeper.won();
+}
 
-void Game::processInput(int key) {
+time_t Game::getCurrentTime() const {
+    return currentTime;
+}
+
+
+void Game::processInput(const int key) {
     const int prevCursorX = cursorX;
     const int prevCursorY = cursorY;
     Grid& grid = minesweeper.getGrid();
@@ -136,9 +150,11 @@ void Game::processInput(int key) {
 #pragma endregion
 #pragma region Keyboard shortcuts
         case ctrl('o'): {
-            std::ofstream saveFile("save.mine");
-            exportGameState(saveFile);
-            saveFile.close();
+            saveGameToFile("save.mine");
+            break;
+        }
+        case ctrl('x'): {
+            // TODO: Prompt the user if they haven't saved
             exit(0);
         }
 #pragma endregion
@@ -178,22 +194,22 @@ void Game::drawGrid() {
 
     for (int y = 0; y < grid.height; y++) {
         for (int x = 0; x < grid.width; x++) {
-            Tile* tile = grid.getTileAt(x, y);
-            int cellY = y + PLAYFIELD_Y_OFFSET;
-            int cellX = x * 3 + 1;
+            const Tile* tile = grid.getTileAt(x, y);
+            const int cellY = y + PLAYFIELD_Y_OFFSET;
+            const int cellX = x * 3 + 1;
 
             if (tile->isOpened()) {
                 if (tile->hasMine() && tile->isFlagged()) {
-                    graphics::print(cellX, cellY, "?", Color::WHITE, Color::GREEN);
+                    graphics::print(cellX, cellY, "►", Color::WHITE, Color::GREEN);
                 } else if (tile->hasMine()) {
-                    graphics::print(cellX, cellY, "*", Color::WHITE, Color::RED);
+                    graphics::print(cellX, cellY, "✶", Color::WHITE, Color::RED);
                 } else if (tile->nearbyMinesCount) {
                     graphics::print(cellX, cellY, std::to_string(tile->nearbyMinesCount), getColorForMineCount(tile->nearbyMinesCount));
                 } else {
                     graphics::print(cellX, cellY, " ");
                 }
             } else if (tile->isFlagged()) {
-                graphics::print(cellX, cellY, "?", Color::YELLOW);
+                graphics::print(cellX, cellY, "►", Color::YELLOW);
             } else {
                 graphics::print(cellX, cellY, "-");
             }
@@ -202,11 +218,11 @@ void Game::drawGrid() {
 }
 
 void Game::drawAll() {
-    Grid& grid = minesweeper.getGrid();
+    const Grid& grid = minesweeper.getGrid();
     const int gridWidth = grid.width * 3;
-    int xOffset = gridWidth + 3;
+    const int xOffset = gridWidth + 3;
 
-    resize_term(std::max(14, grid.height + PLAYFIELD_Y_OFFSET), xOffset + 27);
+    resize_term(std::max(14, grid.height + PLAYFIELD_Y_OFFSET + 2), xOffset + 27);
 
     updateTimer();
     updateFlagCount();
@@ -228,7 +244,8 @@ void Game::drawAll() {
     graphics::print(xOffset, 11, "open:  space");
     graphics::print(xOffset, 12, "flag:  f");
 
-    graphics::print(xOffset, 14, "save and quit: ctrl + o");
+    graphics::print(xOffset, 14, "save: ctrl + o");
+    graphics::print(xOffset, 15, "exit: ctrl + x");
 
     graphics::print(cursorX * 3, cursorY + PLAYFIELD_Y_OFFSET, "[");
     graphics::print(cursorX * 3 + 2, cursorY + PLAYFIELD_Y_OFFSET, "]");
@@ -236,7 +253,7 @@ void Game::drawAll() {
 }
 
 void Game::updateFace(const char *face) {
-    Grid& grid = minesweeper.getGrid();
+    const Grid& grid = minesweeper.getGrid();
     const int gridWidth = grid.width * 3;
 
     graphics::print((gridWidth - 11) / 2, 0, face);
@@ -247,7 +264,7 @@ void Game::updateTimer() const {
 }
 
 void Game::updateFlagCount() {
-    Grid& grid = minesweeper.getGrid();
+    const Grid& grid = minesweeper.getGrid();
     mvprintw(0, grid.width * 3 - 11, "Flags: %03d", minesweeper.remainingFlags());
 }
 
@@ -281,8 +298,6 @@ void Game::end() {
     } else {
         updateFace(LOSE_FACE);
     }
-
-    while (getch() != ' ');
 }
 
 Game Game::importGameState(std::istream &is) {
@@ -291,36 +306,27 @@ Game Game::importGameState(std::istream &is) {
     if (!std::getline(is, buf)) {
         throw std::runtime_error("Truncated stream: could not get magic bytes");
     }
-    if (buf != "Minesweeper Format Version 1.00") {
+
+    if (buf != "Minesweeper Format Version 2.00") {
         throw std::runtime_error("Invalid save file.");
     }
 
-    if (!std::getline(is, buf)) {
-        throw std::runtime_error("Truncated stream: could not get timer");
-    }
-    time_t currentTime = std::stoll(buf);
+    time_t currentTime;
+    int width, height, cursorX, cursorY, difficultyId;
 
-    if (!std::getline(is, buf)) {
-        throw std::runtime_error("Truncated stream: could not get board width");
-    }
-    int width = std::stoi(buf);
+    is >> currentTime >> width >> height >> cursorX >> cursorY >> difficultyId;
 
-    if (!std::getline(is, buf)) {
-        throw std::runtime_error("Truncated stream: could not get board height");
-    }
-    int height = std::stoi(buf);
+    std::getline(is, buf);
 
     int mineCount = 0;
     std::vector<Tile> tiles;
 
     for (int i = 0; i < width * height; i++) {
-        if (!std::getline(is, buf)) {
-            throw std::runtime_error("Truncated stream: could not get board state");
-        }
+        int state;
+        is >> state;
 
-        int state = std::stoi(buf);
-        int x = i % width;
-        int y = i / width;
+        const int x = i % width;
+        const int y = i / width;
 
         Tile tile(x, y);
 
@@ -342,11 +348,13 @@ Game Game::importGameState(std::istream &is) {
         tiles.push_back(tile);
     }
 
-    Grid grid(tiles, width, height, mineCount);
-    Minesweeper minesweeper(grid);
-    Game game(minesweeper);
+    const Grid grid(tiles, width, height, mineCount);
+    const Minesweeper minesweeper(grid);
+    Game game(minesweeper, difficultyId);
 
     game.currentTime = currentTime;
+    game.cursorX = cursorX;
+    game.cursorY = cursorY;
 
     return game;
 }
@@ -354,20 +362,34 @@ Game Game::importGameState(std::istream &is) {
 void Game::exportGameState(std::ostream &os) {
     Grid& grid = minesweeper.getGrid();
 
-    os << "Minesweeper Format Version 1.00\n";
-    os << currentTime << '\n';
-    os << grid.width << '\n';
-    os << grid.height << '\n';
+    os << "Minesweeper Format Version 2.00\n";
+    os << currentTime << ' ' << grid.width << ' ' << grid.height << ' ' << cursorX << ' ' << cursorY << ' ' << difficultyId << '\n';
 
     for (int i = 0; i < grid.tileCount; i++) {
-        Tile* tile = grid.getTileAtIndex(i);
+        const Tile* tile = grid.getTileAtIndex(i);
 
         if (!tile) {
             break;
         }
 
-        uint8_t state = tile->nearbyMinesCount | (tile->hasMine() << 4) | (tile->isOpened() << 5) | (tile->isFlagged() << 6);
+        const int state = tile->nearbyMinesCount
+                            | tile->hasMine() << 4
+                            | tile->isOpened() << 5
+                            | tile->isFlagged() << 6;
 
-        os << std::to_string(state) << '\n';
+        os << state << ' ';
     }
+}
+
+void Game::saveGameToFile(const std::string& filename) {
+    const Grid& grid = minesweeper.getGrid();
+    const int yOffset = grid.height + PLAYFIELD_Y_OFFSET + 1;
+
+    std::ofstream saveFile(filename);
+    const std::time_t saveTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+    exportGameState(saveFile);
+    saveFile.close();
+
+    mvprintw(yOffset, 1, "Saved current game at %s", std::ctime(&saveTime));
 }

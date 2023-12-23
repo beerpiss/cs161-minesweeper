@@ -5,10 +5,8 @@
 #ifndef MINESWEEPER_MINESWEEPER_H
 #define MINESWEEPER_MINESWEEPER_H
 
-#include <vector>
 #include "Grid.h"
 #include "Tile.h"
-
 
 class Minesweeper {
 public:

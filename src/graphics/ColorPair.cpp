@@ -10,7 +10,7 @@ int graphics::ColorPair::get(graphics::Color a, graphics::Color b) {
     static std::unordered_map<uint8_t, int> pairs;
     static short counter = 1;
 
-    uint8_t key = a | (b << 4u);
+    uint8_t key = a | b << 4u;
     auto pair = pairs.find(key);
 
     if (pair == pairs.end()) {

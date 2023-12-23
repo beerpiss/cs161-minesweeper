@@ -5,7 +5,7 @@
 #ifndef MINESWEEPER_CURSES_H
 #define MINESWEEPER_CURSES_H
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #define NCURSES_MOUSE_VERSION 2
 #include <pdcurses.h>
 #else

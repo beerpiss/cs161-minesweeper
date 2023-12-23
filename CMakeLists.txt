@@ -30,7 +30,10 @@ add_executable(minesweeper src/main.cpp
         src/graphics/Print.h
         src/graphics/ColorPair.cpp
         src/graphics/ColorPair.h
-        src/include/curses.h)
+        src/include/curses.h
+        src/Leaderboard.cpp
+        src/Leaderboard.h
+)
 
 target_include_directories(minesweeper PRIVATE src/include)
 target_compile_definitions(minesweeper PRIVATE NCURSES_STATIC)

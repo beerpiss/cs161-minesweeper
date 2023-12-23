@@ -12,14 +12,18 @@
 
 class Game {
 public:
-    Game(int width, int height, int mineDensityPercentage);
-    explicit Game(Minesweeper minesweeper);
+    Game(int width, int height, int mineDensityPercentage, int difficultyId);
+    Game(Minesweeper minesweeper, int difficultyId);
 
     static Game importGameState(std::istream& is);
     void start();
+
+    [[nodiscard]] bool won() const;
+    [[nodiscard]] time_t getCurrentTime() const;
+
+    const int difficultyId;
 private:
     Minesweeper minesweeper;
-    graphics::Graphics graphics;
 
     time_t currentTime = 0;
 
@@ -36,6 +40,7 @@ private:
     static graphics::Color getColorForMineCount(int nearbyMineCount);
     void end();
     void exportGameState(std::ostream& os);
+    void saveGameToFile(const std::string& filename);
 };
 
 

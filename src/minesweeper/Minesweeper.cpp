@@ -4,12 +4,28 @@
 
 #include "Minesweeper.h"
 
+#include <algorithm>
 #include <array>
 
 Minesweeper::Minesweeper(int width, int height, int mineDensityPercentage)
     : grid(Grid(width, height, mineDensityPercentage)) { }
 
-Minesweeper::Minesweeper(Grid grid) : grid(std::move(grid)) { }
+Minesweeper::Minesweeper(Grid grid) : grid(std::move(grid)) {
+    for (int i = 0; i < this->grid.tileCount; i++) {
+        Tile* tile = this->grid.getTileAtIndex(i);
+
+        if (!tile) {
+            continue;
+        }
+
+        if (tile->isOpened()) {
+            opened++;
+        } else if (tile->isFlagged()) {
+            totalFlagged++;
+            correctlyFlagged += tile->hasMine();
+        }
+    }
+}
 
 void Minesweeper::flag(int x, int y) {
     Tile *tile = grid.getTileAt(x, y);
@@ -48,7 +64,8 @@ void Minesweeper::open(int x, int y) {
 }
 
 bool Minesweeper::won() const {
-    return correctlyFlagged == grid.mineCount && correctlyFlagged == totalFlagged;
+    return (correctlyFlagged == grid.mineCount && correctlyFlagged == totalFlagged)
+        || grid.tileCount - opened == grid.mineCount;
 }
 
 bool Minesweeper::lost() const {
@@ -73,7 +90,7 @@ void Minesweeper::open(Tile *tile) {
         // if the current tile is open and is surrounded by the correct number
         // of flags. We implement this quality-of-life feature.
         if (tile->nearbyMinesCount > 0 && tile->nearbyMinesCount == grid.countNearbyFlags(tile->x, tile->y)) {
-            std::array<Tile*, 8> nearbyTiles = grid.getNearbyTiles(tile->x, tile->y);
+            const std::array<Tile*, 8> nearbyTiles = grid.getNearbyTiles(tile->x, tile->y);
 
             for (Tile* t : nearbyTiles) {
                 if (t && !t->isOpened()) {
