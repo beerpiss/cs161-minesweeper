@@ -1,6 +1,8 @@
 # cs161-minesweeper
 TUI Minesweeper game (university project)
 
+Report: https://docs.google.com/document/d/1VD12sAQrlc9T2URvuIl5DXqfA-ODwuwoS1ShUKyRvJQ/edit?usp=sharing
+
 ## TODO
 - [x] Drawing the board (including cells, mines and flags).
 - [x] Changing the state of each cell when it is selected.
